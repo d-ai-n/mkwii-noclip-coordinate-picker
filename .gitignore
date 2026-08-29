@@ -55,6 +55,12 @@ rust/target/
 data/*
 !data/.gitkeep
 !data/Examples/
+
+# Locally extracted course/collision data and locally produced labels.
+tools/shortcut-labeler/data/*.json
+tools/shortcut-labeler/collision/data/
+tools/shortcut-labeler/*.log
+
 dist/
 
 .wireit

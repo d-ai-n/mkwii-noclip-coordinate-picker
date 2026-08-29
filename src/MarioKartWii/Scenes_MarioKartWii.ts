@@ -23,6 +23,8 @@ import { makeBackbufferDescSimple, standardFullClearRenderPassDescriptor } from 
 import { GfxrAttachmentSlot } from '../gfx/render/GfxRenderGraph.js';
 import { EggDrawPathBloom, EggDrawPathDOF, parseBBLM, parseBDOF } from './PostEffect.js';
 import { BTI, BTIData } from '../Common/JSYSTEM/JUTTexture.js';
+import { MKWiiPinOverlay } from './MKWiiPinOverlay.js';
+import { makeVisualModelTriangles } from './mkwii_pin_core.js';
 
 interface ObjFlowObj {
     name: string;
@@ -118,6 +120,7 @@ class MarioKartWiiRenderer {
     public eggLightManager: EggLightManager | null = null;
     public baseObjects: BaseObject[] = [];
     public modelCache = new ModelCache();
+    public pinOverlay: MKWiiPinOverlay | null = null;
 
     constructor(context: SceneContext, public commonCache: CommonCache) {
         this.renderHelper = new GXRenderHelperGfx(context.device, context);
@@ -246,10 +249,12 @@ class MarioKartWiiRenderer {
 
         this.prepareToRender(device, viewerInput);
         builder.execute();
+        this.pinOverlay?.update(viewerInput.camera);
         this.renderInstListMain.reset();
     }
 
     public destroy(device: GfxDevice): void {
+        this.pinOverlay?.destroy();
         this.renderHelper.destroy();
         this.textureHolder.destroy(device);
         this.modelCache.destroy(device);
@@ -954,7 +959,7 @@ class MarioKartWiiSceneDesc implements Viewer.SceneDesc {
         }
     }
 
-    public static async createSceneFromU8Archive(context: SceneContext, arc: U8.U8Archive): Promise<MarioKartWiiRenderer> {
+    public static async createSceneFromU8Archive(context: SceneContext, arc: U8.U8Archive, courseId: string | null = null): Promise<MarioKartWiiRenderer> {
         const commonCache = await context.dataShare.ensureObject(`MarioKartWii/CommonCache`, async () => {
             const buffer = await context.dataFetcher.fetchData(`MarioKartWii/Race/Common.szs`);
             return new CommonCache(await loadSZS(buffer));
@@ -967,6 +972,8 @@ class MarioKartWiiSceneDesc implements Viewer.SceneDesc {
         const modelCache = renderer.modelCache, cache = renderer.renderHelper.renderCache;
 
         const courseRRES = modelCache.ensureRRES(device, renderer, arc, `./course_model.brres`);
+        if (courseId !== null)
+            renderer.pinOverlay = new MKWiiPinOverlay(context, courseId, courseRRES.mdl0.flatMap(m => makeVisualModelTriangles(m.shapes)));
         const courseInstance = new CourseBGRenderer(this.createModelInstanceFromRRES(renderer, courseRRES, 'course'));
         courseInstance.modelInstance.setSortKeyLayer(GfxRendererLayer.OPAQUE);
         renderer.baseObjects.push(courseInstance);
@@ -1014,7 +1021,7 @@ class MarioKartWiiSceneDesc implements Viewer.SceneDesc {
 
     public async createScene(device: GfxDevice, context: SceneContext): Promise<Viewer.SceneGfx> {
         const courseSZS = await context.dataFetcher.fetchData(`MarioKartWii/Race/Course/${this.id}.szs`);
-        return MarioKartWiiSceneDesc.createSceneFromU8Archive(context, await loadSZS(courseSZS));
+        return MarioKartWiiSceneDesc.createSceneFromU8Archive(context, await loadSZS(courseSZS), this.id);
     }
 }
 

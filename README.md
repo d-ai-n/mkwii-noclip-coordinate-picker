@@ -1,89 +1,62 @@
-<img align="right" src="src/assets/logo.png">
+# MKWii Noclip Coordinate Picker
 
-# <a href="https://noclip.website">noclip</a>
+A local-only coordinate-picking overlay for Mario Kart Wii scenes in [noclip.website](https://github.com/magcius/noclip.website).
 
-The reverse engineering of model formats was done by many people. See the application for full credits.
+It lets a user hold **Shift** and left-click a visible course surface to create a pin in native MKWii world coordinates (`X`, `Y`, `Z`). Pins stay anchored while the camera moves, can be edited numerically, and can be exported as JSON.
 
-## Contributing
+## What is included
 
-Contributions are very welcome! New games, new features, and bug fixes are all very appreciated. Even small contributions like proper map names, grouping maps and new default savestates are extremely helpful.
+- The noclip.website source tree, with the MKWii pin overlay integration.
+- A loopback-only proxy/labeler server in `tools/shortcut-labeler/`.
+- KMP checkpoint extraction and coordinate/raycast unit tests.
 
-## AI Contributions Policy
+## What is deliberately not included
 
-* If AI was used in any capacity for your contribution (coding, reverse engineering, authoring commit messages or PR descriptions), this must be disclosed in your pull request.
-* Please only submit contributions that you have tested, reviewed, and feel you understand.
-* All comments or documentation *must* be fully human-authored. Any AI-written or even AI-assisted comments are not allowed.
-* Project maintainers reserve the right to reject contributions at any time, for any reason, including if they suspect this policy has not been correctly followed.
+This repository contains **no game ISO, extracted Nintendo assets, course archives, collision meshes, user saves, ghost files, personal paths, credentials, or generated coordinate labels**. Obtain and extract any game data yourself and keep it under the ignored `data/` directory.
 
-## Development Guide
+## Run locally
 
-To develop for noclip.website, you'll need these requisites:
+Prerequisites: Node.js 22+, pnpm 10+, Rust with `wasm32-unknown-unknown`, and the noclip.website build prerequisites.
 
-* Your code editor of choice (for example, [Visual Studio Code](https://code.visualstudio.com/), [WebStorm](https://www.jetbrains.com/webstorm/)),
-* [Node.js](https://nodejs.org/en/download). Choose the latest LTS version and choose the `pnpm` package manager,
-* [rustup](https://rust-lang.org/learn/get-started/).
+```bash
+pnpm install
+rustup target add wasm32-unknown-unknown
+cd rust
+cargo install cargo-run-bin
+cargo bin --install
+cd ..
+tools/shortcut-labeler/run-local.sh
+```
 
-Then, use the following commands to set up your environment (only needed every so often):
-* Install dependencies from npm: `pnpm install`,
-* Set up the required rust binaries:
-  ```shell
-  rustup target add wasm32-unknown-unknown
-  cd rust
-  cargo install cargo-run-bin
-  cargo bin --install
-  ```
+The launcher binds only to loopback:
 
-Finally, to build and run the project, use `pnpm start`. This will start a live-reloading environment and uses filesystem watchers to auto-build the project. To include live-reloading for Rust code as well, use `pnpm start --watch`.
+- `http://127.0.0.1:18088/three/#mkwii/boardcross_course` — textured 3D scene and picker
+- `http://127.0.0.1:18088/` — 2D labeler
 
-Note that Rust will be built in debug mode by default, which can greatly affect performance. To build the project with Rust in release mode, use `pnpm start:release` instead.
+For a remote machine, use an SSH tunnel rather than exposing either port publicly:
 
-For any questions related to development, see the [Official noclip.website Discord Server](https://discord.gg/bkJmKKv)'s #development channel. A number of developers from the community are present there and can help answer questions if you run into any additional issues getting set up.
+```bash
+ssh -N -L 18088:127.0.0.1:18088 user@host
+```
 
-## Controls
+## Using the 3D picker
 
-Key | Description
--|-
-`Z` | Show/hide all UI
-`T` | Open "Games" list
-`W`/`A`/`S`/`D` or Arrow Keys | Move camera
-Hold `Shift` | Make camera move faster
-Hold `\` | Make camera move slower
-`E` or `Page Up` or `Space` | Move camera up
-`Q` or `Page Down` or `Ctrl+Space` | Move camera down
-`Scroll Wheel` | Adjust camera movement speed (in WASD camera mode; instead changes the zoom level in Orbit or Ortho camera modes)
-`I`/`J`/`K`/`L` | Tilt camera
-`O` | Rotate camera clockwise
-`U` | Rotate camera counterclockwise
-`X` | in WASD camera mode; enables "Hover Mode", locking changes to the y axis to the "Move camera up/down" controls
-`1`/`2`/`3`/`4`/`5`/`6`/`7`/`8`/`9` | Load savestate
-`Shift`+`1`/`2`/`3`/`4`/`5`/`6`/`7`/`8`/`9` | Save savestate
-`Numpad 3` | Export save states
-`.` | Freeze/unfreeze time
-`,` | Hold to slowly move through time
-`F9` | Reload current scene
-`B` | Reset camera position back to origin
-`R` | Start/stop automatic orbiting (requries Orbit or Ortho camera modes)
-`Numpad 5` | Immediately stop all orbiting (requries Orbit or Ortho camera modes)
-`Numpad 2`/`Numpad 4`/`Numpad 6`/`Numpad 8` | Snap view to front/left/right/top view (requires Orbit camera mode)
-`F` | Not sure what this key does, let me know if you figure it out
+1. Open an MKWii course in the `/three/` route.
+2. Hold **Shift** and left-click a visible course surface.
+3. Edit the selected pin with `X`, `Y`, and `Z`, then choose **Apply XYZ**.
+4. Use **Download JSON** to export coordinates.
 
-## Third-Party Credits
+The rendered course triangles are the primary picking target. A local collision OBJ at `tools/shortcut-labeler/collision/data/<course-id>.obj` can optionally serve as a fallback; collision files are ignored and must not be committed.
 
-All icons you see are from [The Noun Project](https://thenounproject.com/), used under Creative Commons CC-BY:
-* Truncated Pyramid by Bohdan Burmich
-* Images by Creative Stall
-* Help by Gregor Cresnar
-* Open by Landan Lloyd
-* Nightshift by mikicon
-* Layer by Chameleon Design
-* Sand Clock by James
-* Line Chart by Shastry
-* Search by Alain W.
-* Save by Prime Icons
-* Overlap by Zach Bogart
-* VR by Fauzan Adaiima
-* Play Clapboard by Yoyon Pujiyono
-* Undo by Numero Uno
-* Redo by Numero Uno
-* Zoom In by Tanvir Islam
-* Zoom Out by Tanvir Islam
+## Verification
+
+```bash
+./node_modules/.bin/tsx tests/mkwii_pin_core.test.ts
+./node_modules/.bin/tsc --noEmit --skipLibCheck
+python3 -m unittest discover -s tools/shortcut-labeler/tests -v
+node --test tools/shortcut-labeler/tests/core.test.js
+```
+
+## Upstream and licensing
+
+This is a derived project based on `magcius/noclip.website`; the original upstream remote is retained as `upstream`. See `LICENSE` for upstream licensing and attribution.
